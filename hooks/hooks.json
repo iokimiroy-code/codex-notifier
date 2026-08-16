@@ -1,0 +1,12 @@
+{
+  "description": "Codex 提示音 lifecycle hooks",
+  "hooks": {
+    "SessionStart": [{ "hooks": [{ "type": "command", "command": "node \"$PLUGIN_ROOT/scripts/codex-hook.mjs\" SessionStart", "commandWindows": "node \"%PLUGIN_ROOT%\\scripts\\codex-hook.mjs\" SessionStart", "async": true, "timeout": 3 }] }],
+    "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "node \"$PLUGIN_ROOT/scripts/codex-hook.mjs\" UserPromptSubmit", "commandWindows": "node \"%PLUGIN_ROOT%\\scripts\\codex-hook.mjs\" UserPromptSubmit", "async": true, "timeout": 3 }] }],
+    "PermissionRequest": [{ "hooks": [{ "type": "command", "command": "node \"$PLUGIN_ROOT/scripts/codex-hook.mjs\" PermissionRequest", "commandWindows": "node \"%PLUGIN_ROOT%\\scripts\\codex-hook.mjs\" PermissionRequest", "async": true, "timeout": 3 }] }],
+    "Stop": [{ "hooks": [{ "type": "command", "command": "node \"$PLUGIN_ROOT/scripts/codex-hook.mjs\" Stop", "commandWindows": "node \"%PLUGIN_ROOT%\\scripts\\codex-hook.mjs\" Stop", "async": true, "timeout": 3 }] }],
+    "SessionEnd": [{ "hooks": [{ "type": "command", "command": "node \"$PLUGIN_ROOT/scripts/codex-hook.mjs\" SessionEnd", "commandWindows": "node \"%PLUGIN_ROOT%\\scripts\\codex-hook.mjs\" SessionEnd", "async": true, "timeout": 3 }] }],
+    "SubagentStart": [{ "hooks": [{ "type": "command", "command": "node \"$PLUGIN_ROOT/scripts/codex-hook.mjs\" SubagentStart", "commandWindows": "node \"%PLUGIN_ROOT%\\scripts\\codex-hook.mjs\" SubagentStart", "async": true, "timeout": 3 }] }],
+    "SubagentStop": [{ "hooks": [{ "type": "command", "command": "node \"$PLUGIN_ROOT/scripts/codex-hook.mjs\" SubagentStop", "commandWindows": "node \"%PLUGIN_ROOT%\\scripts\\codex-hook.mjs\" SubagentStop", "async": true, "timeout": 3 }] }]
+  }
+}
