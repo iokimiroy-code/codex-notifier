@@ -2,7 +2,11 @@ import http from "node:http";
 import { spawn } from "node:child_process";
 import readline from "node:readline";
 import path from "node:path";
+import fs from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { playWindowsAlert } from "../scripts/native-alert.mjs";
+import { sendWindowsNotification } from "../scripts/native-notification.mjs";
+import { getNotifierDirectory, publicNotifierSettings, readNotifierSettings, writeNotifierSettings } from "../scripts/notifier-settings.mjs";
 
 export const PORT = Number(process.env.CODEX_NOTIFIER_PORT || 43123);
 
@@ -61,9 +65,7 @@ function upsertTask(event) {
   };
   tasks.set(id, task);
   const publicTask = { ...task };
-  delete publicTask.startedAt;
-  delete publicTask.updatedAt;
-  broadcast(publicTask);
+  broadcast({ ...publicTask, type: event.type || "TASK_RUNNING" });
   return publicTask;
 }
 
@@ -122,9 +124,24 @@ function appServerToEvent(message) {
   return null;
 }
 
+function nativeEventKind(state) {
+  return state === "failed" ? "failed" : state === "waiting" ? "waiting" : "complete";
+}
+
+function nativeEventMessage(task) {
+  if (task.state === "waiting") return `${task.name} 正在等待你的确认`;
+  if (task.state === "failed") return `${task.name} 执行失败，请查看 Codex`;
+  return `${task.name} 已完成`;
+}
+
 function publishNormalized(event) {
   if (!event) return;
-  upsertTask(event);
+  const previous = tasks.get(taskIdFrom(event));
+  const task = upsertTask(event);
+  if (["completed", "waiting", "failed"].includes(task.state) && previous?.state !== task.state) {
+    void playWindowsAlert(nativeEventKind(task.state));
+    sendWindowsNotification({ title: "Codex 提示音", body: nativeEventMessage(task) });
+  }
 }
 
 function startCodexAppServer() {
@@ -151,11 +168,11 @@ function startCodexAppServer() {
   }
 }
 
-function requestBody(request) {
+function requestBody(request, limit = 1_000_000) {
   return new Promise((resolve, reject) => {
     let body = "";
     request.setEncoding("utf8");
-    request.on("data", (chunk) => { body += chunk; if (body.length > 1_000_000) request.destroy(new Error("Payload too large")); });
+    request.on("data", (chunk) => { body += chunk; if (body.length > limit) request.destroy(new Error("Payload too large")); });
     request.on("end", () => resolve(safeJson(body) || {}));
     request.on("error", reject);
   });
@@ -172,9 +189,54 @@ export function createServer({ port = PORT, startAppServer = true } = {}) {
       response.end(JSON.stringify({ ok: true, codexAppServer: Boolean(codexProcess), hookEndpoint: `http://127.0.0.1:${port}/hook` }));
       return;
     }
+    if (request.method === "GET" && request.url === "/tasks") {
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(JSON.stringify({ tasks: [...tasks.values()] }));
+      return;
+    }
+    if (request.method === "GET" && request.url === "/settings") {
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(JSON.stringify({ settings: publicNotifierSettings(readNotifierSettings()) }));
+      return;
+    }
+    if (request.method === "POST" && request.url === "/settings") {
+      const body = await requestBody(request);
+      const allowed = ["lang", "selectedPet", "soundOn", "nativeNotifications", "soundSource"];
+      const next = Object.fromEntries(allowed.filter((key) => key in body).map((key) => [key, body[key]]));
+      const settings = await writeNotifierSettings(next);
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(JSON.stringify({ settings: publicNotifierSettings(settings) }));
+      return;
+    }
+    if (request.method === "POST" && request.url === "/settings/sound") {
+      const body = await requestBody(request, 3_000_000);
+      const base64 = String(body.data || "").replace(/^data:[^;]+;base64,/, "");
+      const byteLength = Math.floor((base64.length * 3) / 4);
+      const extension = String(body.name || "").match(/\.(wav|mp3|ogg)$/i)?.[1]?.toLowerCase();
+      if (!base64 || !extension || byteLength > 2_000_000) {
+        response.writeHead(400, { "Content-Type": "application/json" });
+        response.end(JSON.stringify({ error: "仅支持不超过 2MB 的 WAV、MP3 或 OGG 音频。" }));
+        return;
+      }
+      const soundDirectory = path.join(getNotifierDirectory(), "sounds");
+      await fs.promises.mkdir(soundDirectory, { recursive: true });
+      const target = path.join(soundDirectory, `custom-${Date.now()}.${extension}`);
+      await fs.promises.writeFile(target, Buffer.from(base64, "base64"));
+      const settings = await writeNotifierSettings({ soundSource: "custom", customSoundPath: target, customSoundName: String(body.name).slice(0, 120) });
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(JSON.stringify({ settings: publicNotifierSettings(settings) }));
+      return;
+    }
+    if (request.method === "POST" && request.url === "/alert") {
+      const body = await requestBody(request);
+      await playWindowsAlert(body.kind || "complete");
+      response.writeHead(204);
+      response.end();
+      return;
+    }
     if (request.method === "GET" && request.url === "/events") {
       response.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive" });
-      response.write(`data: ${JSON.stringify({ type: "BRIDGE_READY", codexAppServer: Boolean(codexProcess), tasks: [...tasks.values()] })}\n\n`);
+      response.write(`data: ${JSON.stringify({ type: "BRIDGE_READY", codexAppServer: Boolean(codexProcess), tasks: [...tasks.values()], settings: publicNotifierSettings(readNotifierSettings()) })}\n\n`);
       clients.add(response);
       request.on("close", () => clients.delete(response));
       return;
