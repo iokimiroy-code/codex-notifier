@@ -1,0 +1,31 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "Codex 提示音",
+  "version": "1.0.0",
+  "identifier": "com.codexnotifier.app",
+  "build": {
+    "beforeDevCommand": "pnpm dev",
+    "devUrl": "http://localhost:4173",
+    "beforeBuildCommand": "pnpm build:frontend",
+    "frontendDist": "../dist/client"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "Codex 提示音",
+        "width": 940,
+        "height": 680,
+        "minWidth": 760,
+        "minHeight": 560,
+        "decorations": false,
+        "transparent": true,
+        "resizable": true,
+        "alwaysOnTop": false
+      }
+    ],
+    "security": { "csp": null }
+  },
+  "bundle": { "active": true, "targets": "all", "icon": ["../public/assets/cat-avatar.png"] }
+}
