@@ -1,0 +1,17 @@
+{
+  "name": "codex-notifier",
+  "version": "1.0.0",
+  "description": "Show local Codex task progress in a lightweight floating companion with sound and desktop notifications.",
+  "author": { "name": "Codex Notifier Team" },
+  "license": "MIT",
+  "keywords": ["codex", "notifications", "tasks", "desktop"],
+  "interface": {
+    "displayName": "Codex 提示音",
+    "shortDescription": "不用盯着，完成会提醒",
+    "longDescription": "监听本机 Codex 生命周期，在任务完成、等待确认或失败时显示状态、播放声音并发送系统通知。",
+    "developerName": "Codex Notifier Team",
+    "category": "Productivity",
+    "capabilities": ["Interactive", "Notifications"],
+    "brandColor": "#D58A77"
+  }
+}
