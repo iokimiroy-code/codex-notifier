@@ -83,7 +83,7 @@ export function hookToEvent(eventName, payload) {
     SessionEnd: "TASK_COMPLETED",
   };
   const type = map[eventName];
-  if (!type) return null;
+  if (!type) return externalAgentToEvent({ ...payload, event: eventName });
   const state = type.replace("TASK_", "").toLowerCase();
   return {
     type,
@@ -95,6 +95,53 @@ export function hookToEvent(eventName, payload) {
     name: taskTitle(payload),
     progress: type === "TASK_COMPLETED" ? 100 : undefined,
     source: "hooks",
+  };
+}
+
+const externalStateMap = {
+  started: ["TASK_STARTED", "running"],
+  start: ["TASK_STARTED", "running"],
+  running: ["TASK_RUNNING", "running"],
+  in_progress: ["TASK_RUNNING", "running"],
+  working: ["TASK_RUNNING", "running"],
+  waiting: ["TASK_WAITING", "waiting"],
+  needs_approval: ["TASK_WAITING", "waiting"],
+  awaiting_confirmation: ["TASK_WAITING", "waiting"],
+  completed: ["TASK_COMPLETED", "completed"],
+  complete: ["TASK_COMPLETED", "completed"],
+  done: ["TASK_COMPLETED", "completed"],
+  success: ["TASK_COMPLETED", "completed"],
+  succeeded: ["TASK_COMPLETED", "completed"],
+  failed: ["TASK_FAILED", "failed"],
+  failure: ["TASK_FAILED", "failed"],
+  error: ["TASK_FAILED", "failed"],
+  cancelled: ["TASK_FAILED", "failed"],
+  canceled: ["TASK_FAILED", "failed"],
+};
+
+function normalizeExternalState(value) {
+  return String(value || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+}
+
+export function externalAgentToEvent(payload = {}) {
+  const rawState = payload.state || payload.status || payload.event || payload.type;
+  const stateEntry = externalStateMap[normalizeExternalState(rawState)]
+    || externalStateMap[normalizeExternalState(String(rawState).replace(/^TASK_/, ""))];
+  if (!stateEntry) return null;
+  const [type, state] = stateEntry;
+  const source = String(payload.source || payload.agent || payload.provider || "external-agent").slice(0, 60);
+  const id = taskIdFrom(payload, `${source}-live`);
+  const progress = Number.isFinite(Number(payload.progress)) ? Math.max(0, Math.min(100, Number(payload.progress))) : type === "TASK_COMPLETED" ? 100 : undefined;
+  return {
+    type,
+    state,
+    taskId: id,
+    threadId: payload.threadId || payload.thread_id,
+    sessionId: payload.sessionId || payload.session_id,
+    turnId: payload.turnId || payload.turn_id,
+    name: payload.name || payload.title || `${source} 任务`,
+    progress,
+    source,
   };
 }
 
@@ -140,7 +187,8 @@ function publishNormalized(event) {
   const task = upsertTask(event);
   if (["completed", "waiting", "failed"].includes(task.state) && previous?.state !== task.state) {
     void playWindowsAlert(nativeEventKind(task.state));
-    sendWindowsNotification({ title: "Codex 提示音", body: nativeEventMessage(task) });
+    const title = ["codex", "hooks", "app-server"].includes(task.source) ? "Codex 提示音" : `${task.source} 提示音`;
+    sendWindowsNotification({ title, body: nativeEventMessage(task) });
   }
 }
 
@@ -244,6 +292,20 @@ export function createServer({ port = PORT, startAppServer = true } = {}) {
     if (request.method === "POST" && request.url === "/hook") {
       const body = await requestBody(request);
       publishNormalized(hookToEvent(body.event || request.headers["x-codex-notifier-event"], body.payload || body));
+      response.writeHead(204);
+      response.end();
+      return;
+    }
+
+    if (request.method === "POST" && request.url === "/agent-event") {
+      const body = await requestBody(request);
+      const event = externalAgentToEvent(body);
+      if (!event) {
+        response.writeHead(400, { "Content-Type": "application/json" });
+        response.end(JSON.stringify({ error: "state must be running, waiting, completed, or failed" }));
+        return;
+      }
+      publishNormalized(event);
       response.writeHead(204);
       response.end();
       return;

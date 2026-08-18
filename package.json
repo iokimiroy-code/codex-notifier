@@ -16,6 +16,7 @@
     "notify:uninstall": "node scripts/install-notify.mjs uninstall",
     "hooks:install": "node scripts/install-hooks.mjs install",
     "hooks:uninstall": "node scripts/install-hooks.mjs uninstall",
+    "notify:agent": "node scripts/agent-notify.mjs",
     "test:bridge": "node --test tests/bridge.test.mjs",
     "test:sites": "node --test tests/sites-worker.test.mjs",
     "tauri": "tauri"

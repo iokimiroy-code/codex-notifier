@@ -24,6 +24,7 @@ Codex 提示音把 Codex 的等待交给桌面助手：你可以继续写代码�
 - Codex Hook：开始、等待确认、完成、失败
 - Codex `notify`：可靠接收 `agent-turn-complete` 完成事件
 - Codex App Server：Tauri 桌面版的原生事件通道
+- 通用 Agent 接口：WorkBuddy、其他 Agent 或自动化脚本可通过 `/agent-event` 或 `pnpm run notify:agent` 发送统一状态
 - Windows 开发版原生声音与通知；Tauri 构建版使用操作系统通知中心
 - 保留用户已有的 `~/.codex/hooks.json` 配置
 
@@ -50,6 +51,28 @@ pnpm tauri dev
 桌面版启动后默认是右下角的小图标窗口，并保持置顶；点击图标展开任务面板。发布给其他 Windows 用户时，应使用 Tauri 生成的安装包，而不是只打开 GitHub 网页。
 
 `pnpm run setup` 会安装两条接入路径：`notify` 用于任务完成提醒，不需要 `/hooks` 信任流程；Hook 用于等待确认等生命周期事件，仍需在 Codex CLI 的 `/hooks` 中检查并信任。两者都是异步的，提示音没有启动时不会阻断 Codex。
+
+### 接入其他 Agent
+
+通知器默认自动监听 Codex；其他 Agent 使用本机通用事件接口即可复用声音、系统通知、窗口震动和任务列表：
+
+```bash
+pnpm run notify:agent -- --state completed --id task-123 --name "Build project" --source workbuddy
+```
+
+支持的状态是 `running`、`waiting`、`completed` 和 `failed`。也可以直接发送 HTTP：
+
+```json
+POST http://127.0.0.1:43123/agent-event
+{
+  "state": "completed",
+  "taskId": "task-123",
+  "name": "Build project",
+  "source": "workbuddy"
+}
+```
+
+Agent 只需要在状态变化时发送一次事件；通知器会负责任务列表、提示音、系统通知和震动。接口只监听本机回环地址，不会把任务内容上传到云端。
 
 首次使用时，点击右侧 **设置**：
 
