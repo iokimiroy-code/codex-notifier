@@ -7,6 +7,7 @@ export const DEFAULT_NOTIFIER_SETTINGS = Object.freeze({
   selectedPet: "dog",
   soundOn: true,
   nativeNotifications: true,
+  vibrationOn: true,
   soundSource: "builtin",
   customSoundPath: "",
   customSoundName: "",

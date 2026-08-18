@@ -201,7 +201,7 @@ export function createServer({ port = PORT, startAppServer = true } = {}) {
     }
     if (request.method === "POST" && request.url === "/settings") {
       const body = await requestBody(request);
-      const allowed = ["lang", "selectedPet", "soundOn", "nativeNotifications", "soundSource"];
+      const allowed = ["lang", "selectedPet", "soundOn", "nativeNotifications", "vibrationOn", "soundSource"];
       const next = Object.fromEntries(allowed.filter((key) => key in body).map((key) => [key, body[key]]));
       const settings = await writeNotifierSettings(next);
       response.writeHead(200, { "Content-Type": "application/json" });

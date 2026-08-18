@@ -59,6 +59,32 @@ button { border: 0; cursor: pointer; }
   backdrop-filter: blur(22px);
 }
 
+.app-shell.is-alerting .notifier-window,
+.app-shell.is-alerting .floating-widget {
+  animation: notifier-shake 680ms cubic-bezier(.36, .07, .19, .97) both;
+}
+
+@keyframes notifier-shake {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0); }
+  15% { transform: translate3d(-4px, 0, 0) rotate(-0.35deg); }
+  30% { transform: translate3d(4px, 0, 0) rotate(0.35deg); }
+  45% { transform: translate3d(-3px, 0, 0) rotate(-0.25deg); }
+  60% { transform: translate3d(3px, 0, 0) rotate(0.25deg); }
+  75% { transform: translate3d(-1px, 0, 0) rotate(-0.1deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell.is-alerting .notifier-window,
+  .app-shell.is-alerting .floating-widget {
+    animation: notifier-pulse 680ms ease both;
+  }
+
+  @keyframes notifier-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.72; }
+  }
+}
+
 .is-dragging .notifier-window, .is-dragging .floating-widget { user-select: none; cursor: grabbing; }
 
 .window-header {

@@ -1,6 +1,10 @@
 import { spawn } from "node:child_process";
+import { existsSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { readNotifierSettings } from "./notifier-settings.mjs";
+
+const BUNDLED_DOG_SOUND = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "assets", "sounds", "dog-complete.mp3");
 
 export function playWindowsAlert(kind = "complete") {
   if (process.platform !== "win32" || process.env.CODEX_NOTIFIER_NATIVE_SOUND === "0") return Promise.resolve();
@@ -10,6 +14,10 @@ export function playWindowsAlert(kind = "complete") {
 
   const customPath = settings.soundSource === "custom" && settings.customSoundPath;
   if (customPath) return playCustomAlert(customPath);
+
+  if (kind === "complete" && settings.selectedPet === "dog" && existsSync(BUNDLED_DOG_SOUND)) {
+    return playCustomAlert(BUNDLED_DOG_SOUND);
+  }
 
   return playBuiltInAlert(kind, settings.selectedPet);
 }
