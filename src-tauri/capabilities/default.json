@@ -3,5 +3,11 @@
   "identifier": "default",
   "description": "Default permissions for Codex 提示音",
   "windows": ["main"],
-  "permissions": ["core:default", "notification:default"]
+  "permissions": [
+    "core:default",
+    "core:window:allow-set-size",
+    "core:window:allow-set-position",
+    "core:window:allow-start-dragging",
+    "notification:default"
+  ]
 }

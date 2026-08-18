@@ -62,7 +62,32 @@ function getDefaultPosition(expanded) {
   if (typeof window === "undefined") return { x: 540, y: 88 };
   return expanded ? { x: Math.max(20, window.innerWidth - 960), y: 84 } : { x: Math.max(20, window.innerWidth - 112), y: Math.max(20, window.innerHeight - 134) };
 }
-function readStoredPosition() { try { return JSON.parse(localStorage.getItem("codex-notifier-position")) || getDefaultPosition(true); } catch { return getDefaultPosition(true); } }
+function readStoredPosition(expanded = false) { try { return JSON.parse(localStorage.getItem("codex-notifier-position")) || getDefaultPosition(expanded); } catch { return getDefaultPosition(expanded); } }
+function getNativeWindow() { return window.__TAURI__?.window?.getCurrentWindow?.() || null; }
+function makeLogicalSize(width, height) {
+  const LogicalSize = window.__TAURI__?.window?.LogicalSize;
+  return LogicalSize ? new LogicalSize(width, height) : { type: "Logical", width, height };
+}
+function makeLogicalPosition(x, y) {
+  const LogicalPosition = window.__TAURI__?.window?.LogicalPosition;
+  return LogicalPosition ? new LogicalPosition(x, y) : { type: "Logical", x, y };
+}
+async function syncNativeWindow(expanded) {
+  const nativeWindow = getNativeWindow();
+  if (!nativeWindow?.setSize) return;
+  const width = expanded ? 940 : 108;
+  const height = expanded ? 680 : 108;
+  try {
+    await nativeWindow.setSize(makeLogicalSize(width, height));
+    if (nativeWindow.setPosition) {
+      const x = Math.max(12, window.screen.availWidth - width - 24);
+      const y = Math.max(12, window.screen.availHeight - height - 48);
+      await nativeWindow.setPosition(makeLogicalPosition(x, y));
+    }
+  } catch {
+    // The browser version does not expose native window controls.
+  }
+}
 function formatDuration(startedAt, fallback = "--:--:--") {
   if (!startedAt) return fallback;
   const total = Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
@@ -80,12 +105,12 @@ function upsertTask(current, task) {
 
 function App() {
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [tasks, setTasks] = useState([]);
   const [selectedTask, setSelectedTask] = useState(null);
   const [network, setNetwork] = useState({ status: "bad", latency: 0, online: navigator.onLine, healthy: false });
-  const [position, setPosition] = useState(readStoredPosition);
+  const [position, setPosition] = useState(() => readStoredPosition(false));
   const [snapToEdge, setSnapToEdge] = useState(true);
   const [showAllTasks, setShowAllTasks] = useState(false);
   const [toast, setToast] = useState("");
@@ -155,6 +180,7 @@ function App() {
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, [expanded]);
+  useEffect(() => { void syncNativeWindow(expanded); }, [expanded]);
 
   const moveWidget = useCallback((event) => {
     const drag = dragRef.current;
@@ -181,6 +207,12 @@ function App() {
 
   const beginDrag = (event) => {
     if (expanded && event.target.closest("button, input, label")) return;
+    const nativeWindow = getNativeWindow();
+    if (nativeWindow?.startDragging && expanded) {
+      event.preventDefault();
+      void nativeWindow.startDragging();
+      return;
+    }
     event.preventDefault(); dragRef.current = { offsetX: event.clientX - position.x, offsetY: event.clientY - position.y }; setIsDragging(true);
   };
   const persistSettings = async (partial, successMessage) => {

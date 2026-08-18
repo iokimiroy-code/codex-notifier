@@ -37,6 +37,8 @@ button { border: 0; cursor: pointer; }
   background: #f7ead7 url("/assets/desktop-wallpaper.png") center / cover no-repeat;
 }
 
+.app-shell.is-collapsed { background: transparent; }
+
 .desktop-layer {
   position: absolute;
   inset: 0;

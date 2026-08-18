@@ -5,7 +5,7 @@
   "identifier": "com.codexnotifier.app",
   "build": {
     "beforeDevCommand": "pnpm dev",
-    "devUrl": "http://localhost:4173",
+    "devUrl": "http://localhost:5173",
     "beforeBuildCommand": "pnpm build:frontend",
     "frontendDist": "../dist/client"
   },
@@ -15,14 +15,15 @@
       {
         "label": "main",
         "title": "Codex 提示音",
-        "width": 940,
-        "height": 680,
-        "minWidth": 760,
-        "minHeight": 560,
+        "width": 108,
+        "height": 108,
+        "minWidth": 108,
+        "minHeight": 108,
         "decorations": false,
         "transparent": true,
         "resizable": true,
-        "alwaysOnTop": false
+        "alwaysOnTop": true,
+        "skipTaskbar": true
       }
     ],
     "security": { "csp": null }
